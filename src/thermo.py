@@ -34,6 +34,9 @@ GPIO.setmode(GPIO.BCM)
 # **********************************************************
 
 version="0.6"
+WUCODE='xxxxxxxxxxxxxxx' # Weather Underground code license to access their API
+USER='username' # User for web access
+PASSW='password' # Password for web access
 BLACK=(0,0,0)
 WHITE=(255,255,255)
 deg=u"\N{DEGREE SIGN}"
@@ -414,7 +417,7 @@ def UpdateStatus():
         if (w==600): # Get updated weather conditions and display it every 10 minutes
             w=0
             try:
-                f = urllib2.urlopen('http://api.wunderground.com/api/902f134f5762a09e/geolookup/conditions/lang:IT/q/Italy/Ravenna.json')
+                f = urllib2.urlopen('http://api.wunderground.com/api/'+WUCODE+'/geolookup/conditions/lang:IT/q/Italy/Ravenna.json')
                 json_string = f.read()
                 parsed_json = json.loads(json_string)
                 try:
@@ -468,7 +471,9 @@ log.setLevel(logging.ERROR)
 
 #** Enabled users/passwords
 def check_auth(username, password): 
-    return username == 'username' and password == 'password'
+    global USER
+    global PASSW
+    return username == USER and password == PASSW
 
 #** Sends a 401 response that enables basic auth"""
 def authenticate(): 
