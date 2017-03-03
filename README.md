@@ -14,4 +14,10 @@ Also follow the instructions for the temperature sensor in the link above.
 
 Software uses Flask for web interface, so you need to install it
 
-Schematic will be uploaded soon...
+To be done (random order):
+- Electrical schematic
+- Terminate menu management ("local" side as web side is ok)
+- Better localization (now every sentence is hard coded when used inside the main source)
+- Upload stl supports for 3D printing
+- Step by step install instructions
+- Blog post for detailed description on https://rpihome.blogspot.com
