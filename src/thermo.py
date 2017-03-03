@@ -37,6 +37,7 @@ version="0.6"
 WUCODE='xxxxxxxxxxxxxxx' # Weather Underground code license to access their API
 USER='username' # User for web access
 PASSW='password' # Password for web access
+WPORT=1111 # Port for web access
 BLACK=(0,0,0)
 WHITE=(255,255,255)
 deg=u"\N{DEGREE SIGN}"
@@ -689,4 +690,4 @@ if __name__ == "__main__":
     time.sleep(5)
 
     # Start the web server
-    app.run(host='0.0.0.0', port=1302, debug=False)
+    app.run(host='0.0.0.0', port=WPORT, debug=False)
