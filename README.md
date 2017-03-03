@@ -12,4 +12,6 @@ BOM:
 To prepare the RPi you should use the Raspbian image provided by adafruit (if you are using their display modules) or configure your image following their instructions.
 Also follow the instructions for the temperature sensor in the link above.
 
-Schematic and software will be uploaded soon...
+Software uses Flask for web interface, so you need to install it
+
+Schematic will be uploaded soon...
