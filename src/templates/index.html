@@ -1,0 +1,277 @@
+<html>
+<head>
+  <title>{{ title }}</title>
+  <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
+  <style>
+    *{margin:0;padding:0;}
+
+    input[type=range].vbar{-webkit-appearance: none;-webkit-transform:rotate(-90deg);height:40px;width:129px;margin:45px 0 45px -45px;}
+    input[type=range].vbar::-webkit-slider-runnable-track {height: 16px;background: darkgreen;border: none;border-radius: 3px;}
+    input[type=range].vbar::-webkit-slider-thumb {-webkit-appearance: none;height: 26px;width: 26px;border-radius: 20%;margin-top: -5px;
+        border: solid 0 transparent;
+        border-width: 1px .3125em;
+        box-shadow: -9 0 9 (-9) #111, -9 0 13 (-9) #111, -9 0 15 (-9) #111, -9 0 18 (-9) #111, -9 0 21 (-9) #111, -13 0 26 (-9) #111;
+        background: linear-gradient(90deg, #f5f5f5, #bbb) content-box, linear-gradient(90deg, #a9a9a7, #f7f7f7) border-box;
+        box-shadow: -2px -2px 2px rgba(0, 0, 62, 0.67), -2px 2px 4px rgba(0, 0, 88, 0.67);
+    }
+    input[type=range].vbar:focus {outline: none;}
+    
+    input[type=range].hbar{-webkit-appearance: none;height:40px;width:270px;margin:0 0 0 0;}
+    input[type=range].hbar::-webkit-slider-runnable-track {height: 16px;background: darkgreen;border: none;border-radius: 3px;}
+    input[type=range].hbar::-webkit-slider-thumb {-webkit-appearance: none;height: 26px;width: 26px;border-radius: 20%;margin-top: -5px;
+        border: solid 0 transparent;
+        border-width: 1px .3125em;
+        box-shadow: -9 0 9 (-9) #111, -9 0 13 (-9) #111, -9 0 15 (-9) #111, -9 0 18 (-9) #111, -9 0 21 (-9) #111, -13 0 26 (-9) #111;
+        background: linear-gradient(90deg, #f5f5f5, #bbb) content-box, linear-gradient(90deg, #a9a9a7, #f7f7f7) border-box;
+        box-shadow: -2px 2px 2px rgba(0, 0, 62, 0.67), 2px 2px 4px rgba(0, 0, 88, 0.67);
+    }
+    input[type=range].hbar:focus {outline: none;}
+    
+    .vdiv{float:left;margin-bottom:8px;width:40px;} 
+    .btn{float:left;margin:0;padding:0;}
+    .bleft{margin-right:10px;}
+    #heating{margin-left:auto;margin-right:auto;width:18px;height:26px;z-index:10;}
+    #mode{float:left;font-size:18px;width:50px;}
+    #settemp{float:right;font-size:18px;}
+    #curtemp{font-size:40px;margin:0;padding:0;left:-40px;position:relative;}
+    #holiday{padding-top:10px;padding-left:8px;width:64px;}
+  </style>
+
+  <script type="text/javascript" src="{{ url_for('static', filename='jquery.js') }}"></script>
+  <script type="text/javascript">
+    var ctemp="{{ temp }}";
+    var stemp="{{ set_temp }}";
+    var modo="{{ auto }}";
+    var stato="{{ heat }}";
+    var tcal={{ tcal }};
+    var temp_list={{ tlist }};
+    var seco=4;
+
+    //Functions to retrieve updated data from thermostat
+    getctemp = function (){$.ajax({url:'/getcurtemp',success: function (data){ctemp=data;}});}
+    getstemp = function (){$.ajax({url:'/getsettemp',success: function (data){stemp=data;}});}
+    getmode = function (){$.ajax({url:'/getmode',success: function (data){modo=data;}});}
+    getstate = function (){$.ajax({url:'/getheat',success: function (data){stato=data;}});}
+    getcal = function (){$.ajax({url:'/getcal',success: function (data){tcal=parseFloat(data);}});}
+    getlist = function (){$.ajax({url:'/getlist',success: function (data){temp_list=(data.replace(/[\[\] ]/g, "")).split(",");}});}
+
+    SendAction = function (par,val){$.ajax({url:'/operate?act='+par,success: function (data){data=data;}});}
+    SendData = function (par,val){$.ajax({url:'/setdata?dato='+par+'&valore='+val,success: function (data){data=data;}});}
+    SendItem = function (par,val,ind){$.ajax({url:'/setdata?dato='+par+'&valore='+val+'&indice='+ind,success: function (data){data=data;}});temp_list[ind]=val;}
+
+    function DispVal(disp,val){document.getElementById(disp).innerHTML=(parseFloat(val)).toFixed(1);}
+    function SetVal(d,i,v){document.getElementById(d).value=temp_list[i];DispVal(v,temp_list[i]);}
+
+    //Update actual values from thermostat
+    function UpdateValues(){
+      getctemp(); document.getElementById('curtemp').innerHTML='&nbsp;'+ctemp+'&deg';
+      getstemp(); document.getElementById('settemp').innerHTML=stemp+'&deg;&nbsp;';
+      getmode(); document.getElementById('mode').innerHTML='&nbsp;'+modo;
+      getstate(); document.getElementById('heating').src='/static/icons/'+stato;
+      if (seco==5){
+        getcal(); document.getElementById('tcal').value=tcal; DispVal('cval',tcal);
+        getlist(); for (i = 0; i < 24; i++) {SetVal("points"+(i+1).toString(),i.toString(),"rval"+(i+1).toString());}
+        //Check for holidays
+        d=new Date();
+        sd=document.getElementById('start').valueAsDate;
+        fd=document.getElementById('stop').valueAsDate;
+        if (d>=sd && d<=fd.setDate(fd.getDate()+1)){document.getElementById('holiday').src="/static/holiday.png";}
+        else{document.getElementById('holiday').src="/static/white.png";}
+      }
+    }
+    
+    //Called every second to update displayed data
+    function GetClock(){
+      //Update date and time
+      var d=new Date();
+      var nmonth=d.getMonth(),ndate=d.getDate(),nyear=d.getYear();
+      if(nyear<1000) nyear+=1900;
+      var nhour=d.getHours(),nmin=d.getMinutes();
+      if(nmin<=9) nmin="0"+nmin;
+      document.getElementById('data').innerHTML="&nbsp;"+ndate+"/"+(nmonth+1)+"/"+nyear;
+      document.getElementById('ora').innerHTML=nhour+":"+nmin+"&nbsp;";
+      seco++;
+      if (seco==10) seco=0;
+      UpdateValues();
+    }
+
+    window.onload=function(){
+      GetClock();
+      setInterval(GetClock,1000);
+    }
+
+    function Riavvia(){
+      var ask=confirm("Riavvio termostato\nSei sicuro?");
+      if(ask){SendAction('reb');}
+    }
+    
+    function Spegni(){
+      var ask=confirm("Spegnimento termostato\nSei sicuro?");
+      if(ask){SendAction('shut');}
+    }
+    
+    function DecTemp(){stemp=(parseFloat(stemp)-0.5).toFixed(1);document.getElementById('settemp').innerHTML=stemp+'&deg;&nbsp;';SendData('set',stemp);}
+    function IncTemp(){stemp=(parseFloat(stemp)+0.5).toFixed(1);document.getElementById('settemp').innerHTML=stemp+'&deg;&nbsp;';SendData('set',stemp);}
+    
+    function ToggleConfig(){
+        if (document.getElementById('configurazione').style.display === 'none'){
+            document.getElementById('configurazione').style.display = 'block';
+            document.getElementById('bconf').src="/static/chiudi.png";
+        }
+        else{
+            document.getElementById('configurazione').style.display = 'none';
+            document.getElementById('bconf').src="/static/config.png";
+        }
+    }
+    </script>
+</head>
+<body>
+  <center>
+    <h2>Termostato</h2>
+    <div style="margin:auto;width:320px;text-align:right;">v{{ version }}</div>
+  </center>
+  <div style="text-align:center;">
+    <div style="margin:auto;border: 1px black solid;height:52px;width:320px;">
+      <div style="float:left;"><img style="vertical-align:middle;" src="/static/icons/{{ w_icon }}.gif"/><span style="font-size:18px;position:relative;top:4px;">&nbsp;{{ w_temp }}&deg;C</span></div>
+      <span style="font-size:18px;position:relative;top:17px;">{{ w_hum }}</span>
+      <div style="float:right;"><span style="font-size:18px;position:relative;top:8px;">{{ w_wspd }}Km/h&nbsp;</span><img style="padding-top:10px;vertical-align:middle;" src="/static/icons/{{ w_wdir }}.gif"/></div>
+    </div>
+    <div style="margin:auto;margin-top:0;padding-top:0;border: 1px black solid;width:320px;">
+      <div style="height:4px;"></div>
+      <img id="heating" src="/static/icons/{{ heat }}"/>
+      <div id="mode">&nbsp;{{ auto }}</div>
+      <div id="settemp">{{ set_temp }}&deg;&nbsp;</div>
+      <br/><span style="float:left;z-index:-1;"><img id="holiday" src="" /></span>
+      <br/>
+      <div id="curtemp"><b>&nbsp;{{ temp }}&deg;</b></div>
+      <br/>
+      <br/>
+      <div id="data" style="float:left;font-size:18px;"></div>
+      <div id="ora" style="float:right;font-size:18px;"></div>
+      <div style="height:4px;clear:both;"></div>
+    </div>
+    <div style="margin:auto;margin-top:4px;width:320px;">
+      <img class="btn bleft" onClick="DecTemp();" src="/static/tmin.png"/>
+      <img class="btn bleft" onClick="IncTemp();" src="/static/tplus.png"/>
+      <img class="btn" onClick="SendData('btn','4');" src="/static/automan.png"/>
+    </div>
+    <p style="clear:both;"></p>
+    <div style="margin:auto;margin-top:12px;width:320px;">
+      <img class="btn" id="bconf" onClick="ToggleConfig()" src="/static/config.png"/>
+    </div>
+    <p style="clear:both;"></p>
+    <div id="configurazione" style="display:none;">
+      <div style="margin:auto;margin-top:4px;width:320px;">
+        <div style="height:4px;"></div>
+        <div style="width:320px;border:1px black solid;">
+          <div style="height:4px;"></div>
+          <b>Vacanza</b><br/>
+          <div style="height:4px;"></div>
+          <input style="width:130px;" type="date" required="required" id="start" name="start" value="{{ ivac }}" onChange="SendData('ivac',this.valueAsDate.toISOString().substring(0, 10));"/>&nbsp;&nbsp;
+          <input style="width:130px;" type="date" required="required" id="stop" name="stop" value="{{ fvac }}" onChange="SendData('fvac',this.valueAsDate.toISOString().substring(0, 10));"/>
+          <div style="height:10px;clear:both;"></div>
+          <div id="vval">{{ tvac }}</div><input type="range" id="tvacancy" name="tvacancy" class="hbar" min="15.0" max="25.0" step="0.5" value="{{ tvac }}" onInput="DispVal('vval',this.value)" onChange="SendData('tvac',this.value);">
+          <div style="height:8px;clear:both;"></div>
+        </div>
+        <div style="height:4px;"></div>
+      </div>
+      <div style="margin:auto;margin-top:4px;width:100%;max-width:970px;">
+        <div style="width:99%;max-width:970px;border:1px black solid;">
+          <div style="height:4px;"></div>
+          <b>Programmazione</b><br/>
+          <div style="height:4px;"></div>
+          <div class="vdiv"><div>00</div>
+            <input type="range" id="points1" class="vbar" name="points1" min="15.0" max="25.0" step="0.5" value="19.0" onInput="DispVal('rval1',this.value)" onChange="SendItem('prog',this.value,0)"><div id="rval1">19.0</div>
+          </div>
+          <div class="vdiv"><div>01</div>
+            <input type="range" id="points2" class="vbar" name="points2" min="15.0" max="25.0" step="0.5" value="19.0" onInput="DispVal('rval2',this.value)" onChange="SendItem('prog',this.value,1)"><div id="rval2">19.0</div>
+          </div>
+          <div class="vdiv"><div>02</div>
+            <input type="range" id="points3" class="vbar" name="points3" min="15.0" max="25.0" step="0.5" value="19.0" onInput="DispVal('rval3',this.value)" onChange="SendItem('prog',this.value,2)"><div id="rval3">19.0</div>
+          </div>
+          <div class="vdiv"><div>03</div>
+            <input type="range" id="points4" class="vbar" name="points4" min="15.0" max="25.0" step="0.5" value="19.0" onInput="DispVal('rval4',this.value)" onChange="SendItem('prog',this.value,3)"><div id="rval4">19.0</div>
+          </div>
+          <div class="vdiv"><div>04</div>
+            <input type="range" id="points5" class="vbar" name="points5" min="15.0" max="25.0" step="0.5" value="19.0" onInput="DispVal('rval5',this.value)" onChange="SendItem('prog',this.value,4)"><div id="rval5">19.0</div>
+          </div>
+          <div class="vdiv"><div>05</div>
+            <input type="range" id="points6" class="vbar" name="points6" min="15.0" max="25.0" step="0.5" value="19.0" onInput="DispVal('rval6',this.value)" onChange="SendItem('prog',this.value,5)"><div id="rval6">19.0</div>
+          </div>
+          <div class="vdiv"><div>06</div>
+            <input type="range" id="points7" class="vbar" name="points7" min="15.0" max="25.0" step="0.5" value="19.0" onInput="DispVal('rval7',this.value)" onChange="SendItem('prog',this.value,6)"><div id="rval7">19.0</div>
+          </div>
+          <div class="vdiv"><div>07</div>
+            <input type="range" id="points8" class="vbar" name="points8" min="15.0" max="25.0" step="0.5" value="19.0" onInput="DispVal('rval8',this.value)" onChange="SendItem('prog',this.value,7)"><div id="rval8">19.0</div>
+          </div>
+          <div class="vdiv"><div>08</div>
+            <input type="range" id="points9" class="vbar" name="points9" min="15.0" max="25.0" step="0.5" value="19.0" onInput="DispVal('rval9',this.value)" onChange="SendItem('prog',this.value,8)"><div id="rval9">19.0</div>
+          </div>
+          <div class="vdiv"><div>09</div>
+            <input type="range" id="points10" class="vbar" name="points10" min="15.0" max="25.0" step="0.5" value="19.0" onInput="DispVal('rval10',this.value)" onChange="SendItem('prog',this.value,9)"><div id="rval10">19.0</div>
+          </div>
+          <div class="vdiv"><div>10</div>
+            <input type="range" id="points11" class="vbar" name="points11" min="15.0" max="25.0" step="0.5" value="19.0" onInput="DispVal('rval11',this.value)" onChange="SendItem('prog',this.value,10)"><div id="rval11">19.0</div>
+          </div>
+          <div class="vdiv"><div>11</div>
+            <input type="range" id="points12" class="vbar" name="points12" min="15.0" max="25.0" step="0.5" value="19.0" onInput="DispVal('rval12',this.value)" onChange="SendItem('prog',this.value,11)"><div id="rval12">19.0</div>
+          </div>
+          <div class="vdiv"><div>12</div>
+            <input type="range" id="points13" class="vbar" name="points13" min="15.0" max="25.0" step="0.5" value="19.0" onInput="DispVal('rval13',this.value)" onChange="SendItem('prog',this.value,12)"><div id="rval13">19.0</div>
+          </div>
+          <div class="vdiv"><div>13</div>
+            <input type="range" id="points14" class="vbar" name="points14" min="15.0" max="25.0" step="0.5" value="19.0" onInput="DispVal('rval14',this.value)" onChange="SendItem('prog',this.value,13)"><div id="rval14">19.0</div>
+          </div>
+          <div class="vdiv"><div>14</div>
+            <input type="range" id="points15" class="vbar" name="points15" min="15.0" max="25.0" step="0.5" value="19.0" onInput="DispVal('rval15',this.value)" onChange="SendItem('prog',this.value,14)"><div id="rval15">19.0</div>
+          </div>
+          <div class="vdiv"><div>15</div>
+            <input type="range" id="points16" class="vbar" name="points16" min="15.0" max="25.0" step="0.5" value="19.0" onInput="DispVal('rval16',this.value)" onChange="SendItem('prog',this.value,15)"><div id="rval16">19.0</div>
+          </div>
+          <div class="vdiv"><div>16</div>
+            <input type="range" id="points17" class="vbar" name="points17" min="15.0" max="25.0" step="0.5" value="19.0" onInput="DispVal('rval17',this.value)" onChange="SendItem('prog',this.value,16)"><div id="rval17">19.0</div>
+          </div>
+          <div class="vdiv"><div>17</div>
+            <input type="range" id="points18" class="vbar" name="points18" min="15.0" max="25.0" step="0.5" value="19.0" onInput="DispVal('rval18',this.value)" onChange="SendItem('prog',this.value,17)"><div id="rval18">19.0</div>
+          </div>
+          <div class="vdiv"><div>18</div>
+            <input type="range" id="points19" class="vbar" name="points19" min="15.0" max="25.0" step="0.5" value="19.0" onInput="DispVal('rval19',this.value)" onChange="SendItem('prog',this.value,18)"><div id="rval19">19.0</div>
+          </div>
+          <div class="vdiv"><div>19</div>
+            <input type="range" id="points20" class="vbar" name="points20" min="15.0" max="25.0" step="0.5" value="19.0" onInput="DispVal('rval20',this.value)" onChange="SendItem('prog',this.value,19)"><div id="rval20">19.0</div>
+          </div>
+          <div class="vdiv"><div>20</div>
+            <input type="range" id="points21" class="vbar" name="points21" min="15.0" max="25.0" step="0.5" value="19.0" onInput="DispVal('rval21',this.value)" onChange="SendItem('prog',this.value,20)"><div id="rval21">19.0</div>
+          </div>
+          <div class="vdiv"><div>21</div>
+            <input type="range" id="points22" class="vbar" name="points22" min="15.0" max="25.0" step="0.5" value="19.0" onInput="DispVal('rval22',this.value)" onChange="SendItem('prog',this.value,21)"><div id="rval22">19.0</div>
+          </div>
+          <div class="vdiv"><div>22</div>
+            <input type="range" id="points23" class="vbar" name="points23" min="15.0" max="25.0" step="0.5" value="19.0" onInput="DispVal('rval23',this.value)" onChange="SendItem('prog',this.value,22)"><div id="rval23">19.0</div>
+          </div>
+          <div class="vdiv"><div>23</div>
+            <input type="range" id="points24" class="vbar" name="points24" min="15.0" max="25.0" step="0.5" value="19.0" onInput="DispVal('rval24',this.value)" onChange="SendItem('prog',this.value,23)"><div id="rval24">19.0</div>
+          </div>
+          <div style="height:8px;clear:both;"></div>
+        </div>
+        <div style="height:4px;"></div>
+      </div>
+      <div style="margin:auto;margin-top:4px;width:320px;">
+        <div style="width:320px;border:1px black solid;">
+          <div style="height:4px;"></div>
+          <b>Calibrazione</b><br/>
+          <div style="height:4px;"></div>
+          <div id="cval">0.0</div><input type="range" id="tcal" name="tcal" class="hbar" min="-5.0" max="5.0" step="0.5" value="0.0" onInput="DispVal('cval',this.value)" onChange="SendData('cal',this.value);tcal=this.value;">
+          <div style="height:8px;clear:both;"></div>
+        </div>
+        <div style="margin:auto;margin-top:40px;width:320px;">
+          <img style="float:left;width:120px;height:40px;" src="/static/riavvia.png" onClick="Riavvia();"/>
+          <img style="float:right;width:120px;height:40px;" src="/static/spegni.png" onClick="Spegni();"/>
+        </div>
+        <div style="height:10px;clear:both;"></div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
