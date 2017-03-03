@@ -468,7 +468,7 @@ log.setLevel(logging.ERROR)
 
 #** Enabled users/passwords
 def check_auth(username, password): 
-    return username == 'mascal' and password == 'Kanak0l970'
+    return username == 'username' and password == 'password'
 
 #** Sends a 401 response that enables basic auth"""
 def authenticate(): 
