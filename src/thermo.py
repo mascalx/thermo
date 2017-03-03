@@ -30,14 +30,20 @@ import RPi.GPIO as GPIO
 GPIO.setmode(GPIO.BCM)
 
 # **********************************************************
+# User definitions
+# **********************************************************
+
+WUCODE='xxxxxxxxxxxxxxx' # Weather Underground code license to access their API
+WUADDRESS='/geolookup/conditions/lang:IT/q/Italy/Ravenna.json' # Address to retrieve weather conditions from WU
+USER='username' # User for web access
+PASSW='password' # Password for web access
+WPORT=1111 # Port for web access
+
+# **********************************************************
 # Definitions
 # **********************************************************
 
 version="0.6"
-WUCODE='xxxxxxxxxxxxxxx' # Weather Underground code license to access their API
-USER='username' # User for web access
-PASSW='password' # Password for web access
-WPORT=1111 # Port for web access
 BLACK=(0,0,0)
 WHITE=(255,255,255)
 deg=u"\N{DEGREE SIGN}"
