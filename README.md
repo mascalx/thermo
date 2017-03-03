@@ -9,7 +9,7 @@ BOM:
 - TFT display: https://thepihut.com/products/adafruit-pitft-2-2-hat-mini-kit-320x240-2-2-tft-no-touch
 - Relay Panasonic AQV252
 
-To prepare the RPi you should use the Raspbian image provided by adafruit (if you are using their display modules) or configure your Rpi following their instructions.
+To prepare the RPi you should use the Raspbian image provided by adafruit (if you are using their display modules) or configure your RPi following their instructions.
 Also follow the instructions for the temperature sensor in the link above.
 
 Software uses Flask for web interface, so you need to install it
