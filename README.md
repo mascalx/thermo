@@ -1,4 +1,4 @@
-# thermo
+# Thermo
 RPi smart thermostat
 
 Uses Pi Zero with display, temperature sensor and solid state relay.
