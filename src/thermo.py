@@ -77,7 +77,6 @@ RST = 23       # TFT parameter
 SPI_PORT = 0   # TFT parameter
 SPI_DEVICE = 0 # TFT parameter
 backlight = 18 # LCD backlight
-backlight = 18 # LCD backlight
 GPIO.setup(backlight, GPIO.OUT)
 B1 = 17 # Button 1 ******Verificare
 GPIO.setup(B1, GPIO.IN, pull_up_down=GPIO.PUD_UP)
