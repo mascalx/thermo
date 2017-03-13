@@ -230,17 +230,18 @@ def Status(display,temp,tset,mode,heating):
     if (heating):
         icon = Image.open("static/icons/flame.gif").convert('RGBA')
         display.paste(icon,(151,58),icon)
+        del icon
     d=datetime.date.fromtimestamp(time.time())
     if (d>=ivac) and (d<=ivac):
         icon = Image.open("static/holiday.png").convert('RGBA')
         display.paste(icon,(8,95),icon)
+        del icon
     locale.setlocale(locale.LC_ALL, "")
     Write(display,font_small,time.strftime("%d %B %Y"),(5,179),BLACK)
     WriteRight(display,font_small,time.strftime("%H:%M"),(314,179),BLACK)
     locale.setlocale(locale.LC_ALL, locale.getdefaultlocale())
     WriteCenter(display,font_big,' %s%s' % (temp,deg),(162,105),BLACK)
     WriteRight(display,font_medium,'%s%s' % (tset,deg),(317,58),BLACK)
-    del icon
     del draw
     TFT_Display()
 
