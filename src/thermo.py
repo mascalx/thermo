@@ -12,7 +12,6 @@
 # Imports
 # **********************************************************
 
-import pygame
 import os
 import sys
 import thread
@@ -24,6 +23,10 @@ import locale
 import logging
 import LM75
 import socket
+from PIL import Image, ImageFont, ImageDraw
+import Adafruit_ILI9341 as TFT
+import Adafruit_GPIO as GPIO
+import Adafruit_GPIO.SPI as SPI
 from flask import Flask, render_template, request, Response
 from functools import wraps   # required for authentication functions
 import RPi.GPIO as GPIO
@@ -69,6 +72,11 @@ light=DISPLAY_ON # Counter for turning off the lcd backlight (seconds)
 temp_list=[20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0] # Hourly (0-23) temperature sets for automatic mode
 weather={'temp':'--', 'hum':'--', 'wspd':'--', 'wdir':'N', 'icon':'sunny'}
 sensor=sensor = LM75.LM75()
+DC = 25        # TFT parameter
+RST = 23       # TFT parameter
+SPI_PORT = 0   # TFT parameter
+SPI_DEVICE = 0 # TFT parameter
+backlight = 18 # LCD backlight
 backlight = 18 # LCD backlight
 GPIO.setup(backlight, GPIO.OUT)
 B1 = 17 # Button 1 ******Verificare
@@ -84,6 +92,11 @@ GPIO.setup(RELAY, GPIO.OUT)
 GPIO.output(RELAY,1) # initial status = heating off (relay not active)
 tlist=[] # Array for temp mean
 max_t_num = 10 # Numbero of readings for mean calculation
+
+# Creates screen image and TFT instance
+screen = Image.new("RGB", (320, 240), "white")
+disp = TFT.ILI9341(DC, rst=RST, spi=SPI.SpiDev(SPI_PORT, SPI_DEVICE, max_speed_hz=64000000))
+disp.begin()
 
 # **********************************************************
 # Thermostat functions
@@ -136,82 +149,101 @@ def LoadConfiguration():
             configurazione.close()
     except:
         pass
-
+        
+#** Draws the image to the display
+def TFT_Display():
+    disp.display(TFT)
+    
 #** Draws the main screen schema
-def ClearScreen(lcd): 
-    lcd.fill(WHITE)
-    pygame.draw.line(lcd, BLACK, (0, 52), (319, 52))
-    pygame.draw.line(lcd, BLACK, (0, 53), (319, 53))
-    pygame.draw.line(lcd, BLACK, (0, 200), (319, 200))
-    pygame.draw.line(lcd, BLACK, (0, 201), (319, 201))
-    pygame.draw.line(lcd, BLACK, (79, 200), (79, 239))
-    pygame.draw.line(lcd, BLACK, (159, 200), (159, 239))
-    pygame.draw.line(lcd, BLACK, (239, 200), (239, 239))
+def ClearScreen(display): 
+    draw = ImageDraw.Draw(display)
+    draw.rectangle([(0,0),display.size], fill = WHITE) # Clear the display
+    draw.line([(0, 52), (319, 52)], fill = BLACK, width=2)
+    #draw.line([(0, 53), (319, 53)], fill = BLACK)
+    draw.line([(0, 200), (319, 200)], fill = BLACK, width=2)
+    #draw.line([(0, 201), (319, 201)], fill = BLACK)
+    draw.line([(79, 200), (79, 239)], fill = BLACK)
+    draw.line([(159, 200), (159, 239)], fill = BLACK)
+    draw.line([(239, 200), (239, 239)], fill = BLACK)
+    del draw
 
 #** Write text left-aligned
-def Write(lcd,font,text,pos,color): 
-    text_surface = font.render(text, True, color)
-    lcd.blit(text_surface, pos)
+def Write(display,style,text,pos,color): 
+    draw = ImageDraw.Draw(display)
+    draw.text(pos,text,font=style,fill=color)
+    del draw
 
 #** Write text centered
-def WriteCenter(lcd,font,text,pos,color): 
-    text_surface = font.render(text, True, color)
-    rect = text_surface.get_rect(center=pos)
-    lcd.blit(text_surface, rect)
+def WriteCenter(display,style,text,pos,color): 
+    draw = ImageDraw.Draw(display)
+    width=draw.textsize(text,font=style)[0] # Width of text
+    X, Y = pos
+    draw.text(((X-width/2),Y),text,font=style,fill=color)
+    del draw
 
 #** Write text right-aligned
-def WriteRight(lcd,font,text,pos,color): 
-    text_surface = font.render(text, True, color)
-    rect = text_surface.get_rect(topright=pos)
-    lcd.blit(text_surface, rect)
+def WriteRight(display,style,text,pos,color): 
+    draw = ImageDraw.Draw(display)
+    width=draw.textsize(text,font=style)[0] # Width of text
+    X, Y = pos
+    draw.text((X-width,Y),text,font=style,fill=color)
+    del draw
 
 #** Show current weather conditions
-def Conditions(lcd,icon,temp,hum,wspd,wdir): 
-    pygame.draw.rect(lcd, WHITE, (0,0,320,52), 0) # Clear the conditions bar
-    image = pygame.image.load("static/icons/"+icon+".gif").convert()
-    lcd.blit(image, (0, 0))
-    Write(lcd,font_small,'%s%s' % (temp,deg),(56,18),BLACK)
-    WriteCenter(lcd,font_small,hum,(160,28),BLACK)
-    WriteRight(lcd,font_small,'%skm/h' % wspd,(279,18),BLACK)
-    image = pygame.image.load("static/icons/"+wdir+".gif").convert()
-    lcd.blit(image, (285, 12))
-    pygame.display.update()
+def Conditions(display,icon,temp,hum,wspd,wdir): 
+    draw = ImageDraw.Draw(display)
+    draw.rectangle([(0,0),(320,51)], fill = WHITE) # Clear the conditions bar
+    icon = Image.open("static/icons/"+icon+".gif").convert('RGBA')
+    display.paste(icon,(0,2),icon)
+    Write(display,font_small,'%s%s' % (temp,deg),(56,18),BLACK)
+    WriteCenter(display,font_small,hum,(160,18),BLACK)
+    WriteRight(display,font_small,'%skm/h' % wspd,(279,18),BLACK)
+    icon = Image.open("static/icons/"+wdir+".gif").convert('RGBA')
+    display.paste(icon,(285,12),icon)
+    del icon
+    del draw
+    TFT_Display()
 
 #** Draw buttons labels
-def Buttons(lcd,b1,b2,b3,b4): 
-    pygame.draw.rect(lcd, WHITE, (0,202,78,39), 0) # Clear the buttons bar
-    pygame.draw.rect(lcd, WHITE, (80,202,78,39), 0)
-    pygame.draw.rect(lcd, WHITE, (160,202,78,39), 0)
-    pygame.draw.rect(lcd, WHITE, (240,202,78,39), 0)
-    WriteCenter(lcd,font_small,b1,(40,220),BLACK)
-    WriteCenter(lcd,font_small,b2,(120,220),BLACK)
-    WriteCenter(lcd,font_small,b3,(200,220),BLACK)
-    WriteCenter(lcd,font_small,b4,(280,220),BLACK)
-    pygame.display.update()
+def Buttons(display,b1,b2,b3,b4): 
+    draw = ImageDraw.Draw(display)
+    draw.rectangle([(0,202),(78,241)], fill = WHITE) # Clear the buttons bar
+    draw.rectangle([(80,202),(158,241)], fill = WHITE)
+    draw.rectangle([(160,202),(238,241)], fill = WHITE)
+    draw.rectangle([(240,202),(318,241)], fill = WHITE)
+    WriteCenter(display,font_small,b1,(40,213),BLACK)
+    WriteCenter(display,font_small,b2,(120,213),BLACK)
+    WriteCenter(display,font_small,b3,(200,213),BLACK)
+    WriteCenter(display,font_small,b4,(280,213),BLACK)
+    del draw
+    TFT_Display()
 
 #** Show current thermostat status
-def Status(lcd,temp,tset,mode,heating): 
-    pygame.draw.rect(lcd, WHITE, (0,54,320,146), 0) # Clear the status bar
+def Status(display,temp,tset,mode,heating): 
+    draw = ImageDraw.Draw(display)
+    draw.rectangle([(0,54),(320,199)], fill = WHITE) # Clear the status bar
     if (mode==AUTO):
-        Write(lcd,font_small,"AUTO",(4,61),BLACK)
+        Write(display,font_small,"AUTO",(4,61),BLACK)
     if (mode==MAN):
-        Write(lcd,font_small,"MANUALE",(4,61),BLACK)
+        Write(display,font_small,"MANUALE",(4,61),BLACK)
     if (mode==SEMI):
-        Write(lcd,font_small,"AUTO(M)",(4,61),BLACK)
+        Write(display,font_small,"AUTO(M)",(4,61),BLACK)
     if (heating):
-        image = pygame.image.load("static/icons/flame.gif").convert()
-        lcd.blit(image, (151, 58))
+        icon = Image.open("static/icons/flame.gif").convert('RGBA')
+        display.paste(icon,(151,58),icon)
     d=datetime.date.fromtimestamp(time.time())
     if (d>=ivac) and (d<=ivac):
-        image = pygame.image.load("static/holiday.png").convert()
-        lcd.blit(image, (8, 95))
+        icon = Image.open("static/holiday.png").convert('RGBA')
+        display.paste(icon,(8,95),icon)
     locale.setlocale(locale.LC_ALL, "")
-    Write(lcd,font_small,time.strftime("%d %B %Y"),(5,177),BLACK)
-    WriteRight(lcd,font_small,time.strftime("%H:%M"),(314,177),BLACK)
+    Write(display,font_small,time.strftime("%d %B %Y"),(5,179),BLACK)
+    WriteRight(display,font_small,time.strftime("%H:%M"),(314,179),BLACK)
     locale.setlocale(locale.LC_ALL, locale.getdefaultlocale())
-    WriteCenter(lcd,font_big,' %s%s' % (temp,deg),(160,125),BLACK)
-    WriteRight(lcd,font_medium,'%s%s' % (tset,deg),(317,58),BLACK)
-    pygame.display.update()
+    WriteCenter(display,font_big,' %s%s' % (temp,deg),(162,105),BLACK)
+    WriteRight(display,font_medium,'%s%s' % (tset,deg),(317,58),BLACK)
+    del icon
+    del draw
+    TFT_Display()
 
 #** Set lcd backlight value
 def LCD_Light(val): 
@@ -278,7 +310,7 @@ def ManageButton(btn):
             on_menu=True
             menu=1
             ShowMenu1(lcd)
-            Buttons(lcd,"1","2","3","Esci")
+            Buttons(screen,"1","2","3","Esci")
         elif (btn==2): # T-
             temp_set=temp_set-0.5
             if (mode==AUTO):
@@ -303,8 +335,8 @@ def ManageButton(btn):
         elif (btn==3):
             pass
         else:
-            Status(lcd,"%0.1f" % temp,"%0.1f" % temp_set,mode,heating)
-            Buttons(lcd,"Menu","T-","T+","A/M")
+            Status(screen,"%0.1f" % temp,"%0.1f" % temp_set,mode,heating)
+            Buttons(screen,"Menu","T-","T+","A/M")
             on_menu=False
             menu=0
     elif (menu==2): # Program
@@ -413,7 +445,7 @@ def UpdateStatus():
             s=0
             if (on_menu==False):
                 temp=GetTemperature()
-                Status(lcd,"%0.1f" % temp,"%0.1f" % temp_set,mode,heating)
+                Status(screen,"%0.1f" % temp,"%0.1f" % temp_set,mode,heating)
         c=c+1    
         if (c == 300): # Every 5 minutes (300 seconds) check lan connection. If not connected tries to restart wlan
             c=0
@@ -447,7 +479,7 @@ def UpdateStatus():
                     weather['icon'] = parsed_json['current_observation']['icon']
                 except:
                     weather['icon'] = "sunny"
-                Conditions(lcd,weather['icon'],weather['temp'],weather['hum'],weather['wspd'],weather['wdir'])
+                Conditions(screen,weather['icon'],weather['temp'],weather['hum'],weather['wspd'],weather['wdir'])
             except:
                 w=540 # If there was an error try to update in 1 minute       
         time.sleep(1)
@@ -464,7 +496,7 @@ def Main():
         btn=GetButton() # Check for button pressed
         if (btn>0): ManageButton(btn) # Manage the pressed button
         if (on_menu==False): # If not into a menu, displays the main screen
-            Status(lcd,"%0.1f" % temp,"%0.1f" % temp_set,mode,heating)
+            Status(screen,"%0.1f" % temp,"%0.1f" % temp_set,mode,heating)
         while btn>0: # Wait for button release to avoid repetitions
             btn=GetButton()
             
@@ -676,18 +708,14 @@ def GetHeating():
 
 if __name__ == "__main__":
     LoadConfiguration()
-    os.putenv('SDL_FBDEV', '/dev/fb1')
 
     # Initialize main display
-    pygame.init()
-    pygame.mouse.set_visible(False)
-    font_big = pygame.font.Font(None, 85)
-    font_medium = pygame.font.Font(None, 36)
-    font_small = pygame.font.Font(None, 24)
-    lcd = pygame.display.set_mode((320, 240))
+    font_big = ImageFont.truetype('freesansbold.ttf', 56)
+    font_medium = ImageFont.truetype('freesansbold.ttf', 30)
+    font_small = ImageFont.truetype('freesansbold.ttf', 16)
     light=DISPLAY_ON
-    ClearScreen(lcd)
-    Buttons(lcd,"Menu","T-","T+","A/M")
+    ClearScreen(screen)
+    Buttons(screen,"Menu","T-","T+","A/M")
   
     # Start parallel threads
     thread.start_new_thread(UpdateStatus, ()) # Thread for updating status
