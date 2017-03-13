@@ -291,7 +291,7 @@ def ShowMenu1(lcd):
 
 #** Act on button press and thermostat status
 def ManageButton(btn): 
-    global lcd
+    global screen
     global menu
     global mode
     global AUTO
@@ -414,7 +414,7 @@ def CheckTemp():
        
 #** Execute recurrent operations (data updates, counters, etc.)
 def UpdateStatus(): 
-    global lcd
+    global screen
     global mode
     global heating
     global temp_set
@@ -586,7 +586,7 @@ def SetData():
     global SEMI
     global MAN
     global AUTO
-    global lcd
+    global screen
     global temp
     global heating
     global tvac
@@ -615,7 +615,7 @@ def SetData():
     if (par=="set"): 
         temp_set=float(valore)
         mode=SEMI
-        Status(lcd,"%0.1f" % temp,"%0.1f" % temp_set,mode,heating)
+        Status(screen,"%0.1f" % temp,"%0.1f" % temp_set,mode,heating)
         SaveConfiguration()
     if (par=="cal"): 
         T_CAL=float(valore)
