@@ -151,7 +151,7 @@ def LoadConfiguration():
         
 #** Draws the image to the display
 def TFT_Display():
-    disp.display(TFT)
+    disp.display(screen.rotate(270))
     
 #** Draws the main screen schema
 def ClearScreen(display): 
