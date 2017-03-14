@@ -284,12 +284,15 @@ def GetButton():
     return btn
     
 #** Show main menu
-def ShowMenu1(lcd): 
-    pygame.draw.rect(lcd, WHITE, (0,54,320,146), 0) # Clear the status bar
-    Write(lcd,font_medium,"1.Programma orario",(15,70),BLACK)
-    Write(lcd,font_medium,"2.Vacanza",(15,100),BLACK)
-    Write(lcd,font_medium,"3.Opzioni",(15,130),BLACK)
-
+def ShowMenu1(display): 
+    draw.rectangle([(0,54),(320,199)], fill = WHITE) # Clear the status bar
+    Write(display,font_medium,"1.Programma orario",(15,70),BLACK)
+    Write(display,font_medium,"2.Vacanza",(15,100),BLACK)
+    Write(display,font_medium,"3.Opzioni",(15,130),BLACK)
+    draw = ImageDraw.Draw(display)
+    del draw
+    TFT_Display()
+    
 #** Act on button press and thermostat status
 def ManageButton(btn): 
     global screen
